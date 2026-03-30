@@ -1,0 +1,13 @@
+node_modules/@supabase/auth-js/src/GoTrueAdminApi.ts:    this.fetch = resolveFetch(fetch)
+node_modules/@supabase/auth-js/src/GoTrueClient.ts:    this.fetch = resolveFetch(settings.fetch)
+node_modules/@supabase/postgrest-js/src/PostgrestBuilder.ts:      this.fetch = builder.fetch
+node_modules/@supabase/postgrest-js/src/PostgrestBuilder.ts:      this.fetch = fetch
+node_modules/@supabase/postgrest-js/src/PostgrestBuilder.ts:    const _fetch = this.fetch
+node_modules/@supabase/postgrest-js/src/PostgrestClient.ts:      this.fetch = (input, init) => {
+node_modules/@supabase/postgrest-js/src/PostgrestClient.ts:      this.fetch = originalFetch
+node_modules/@supabase/postgrest-js/src/PostgrestQueryBuilder.ts:    this.fetch = fetch
+node_modules/@supabase/realtime-js/src/RealtimeClient.ts:    this.fetch = this._resolveFetch(options?.fetch)
+node_modules/@supabase/storage-js/src/lib/common/BaseApiClient.ts:    this.fetch = resolveFetch(fetch)
+node_modules/@supabase/supabase-js/src/lib/fetch.ts:  const fetch = resolveFetch(customFetch)
+node_modules/@supabase/supabase-js/src/SupabaseClient.ts:    this.fetch = fetchWithAuth(supabaseKey, this._getAccessToken.bind(this), settings.global.fetch)
+node_modules/@supabase/functions-js/src/FunctionsClient.ts:    this.fetch = resolveFetch(customFetch)

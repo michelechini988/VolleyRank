@@ -1,0 +1,5 @@
+node_modules/@supabase/supabase-js/src/lib/fetch.ts:  const fetch = resolveFetch(customFetch)
+node_modules/undici/index-fetch.js:module.exports.fetch = function fetch (init, options = undefined) {
+node_modules/undici/index.js:module.exports.fetch = function fetch (init, options = undefined) {
+node_modules/undici/index.js:  globalThis.fetch = module.exports.fetch
+node_modules/undici/docs/docs/api/GlobalInstallation.md:if (typeof globalThis.fetch === 'undefined') {

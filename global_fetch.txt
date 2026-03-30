@@ -1,0 +1,2 @@
+node_modules/undici/index.js:  globalThis.fetch = module.exports.fetch
+node_modules/undici/docs/docs/api/GlobalInstallation.md:if (typeof globalThis.fetch === 'undefined') {

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VolleyRank</title>
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap"
+  rel="stylesheet"
+/>
+
+
+    <!-- Tailwind config con nuova palette pastello -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              /* Pastel sport theme (manteniamo i nomi che usi già) */
+              pink: '#FFB7C5',          // più morbido, meno "evidenziatore"
+              terracotta: '#FF8A70',    // coral caldo per accenti
+              black: '#1D1D1B',
+              lime: '#F2E48C',          // giallo/lime pastello per rating & badge
+              teal: '#2F6F82',          // teal smorzato per header / bottoni
+              cream: '#FFFDF7',         // background principale chiarissimo
+              'cream-dark': '#F6F0E5',  // card / second layer
+
+              /* opzionali se ti servono più avanti */
+              navy: '#1C2A38',
+              mint: '#AEE5C2',
+            },
+            fontFamily: {
+  body: ['Inter', 'sans-serif'],
+  title: ['"Bebas Neue"', 'sans-serif'],
+  soft: ['Nunito', 'sans-serif'],
+},
+            boxShadow: {
+              cartoon: '4px 4px 0px 0px #1d1d1b',
+              'cartoon-sm': '2px 2px 0px 0px #1d1d1b',
+              'cartoon-hover': '6px 6px 0px 0px #1d1d1b',
+            },
+            borderRadius: {
+              card: '16px',
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Global theme & utilities -->
+    <style>
+      :root {
+        /* stessa naming, ma HEX più fresche/pastello */
+        --pink: #FFB7C5;
+        --terracotta: #FF8A70;
+        --black: #1D1D1B;
+        --lime: #F2E48C;
+        --teal: #2F6F82;
+        --cream: #FFFDF7;
+        --cream-darker: #F6F0E5;
+
+        --background: var(--cream);
+        --foreground: var(--black);
+        --max-width: 1600px;
+      }
+
+      body {
+        background-color: var(--background);
+        color: var(--foreground);
+        -webkit-font-smoothing: antialiased;
+        margin: 0;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+
+      #root {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Scrollbar soft */
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--cream-darker);
+        border-left: 2px solid var(--black);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--teal);
+        border: 2px solid var(--black);
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--terracotta);
+      }
+
+      /* Hexagon Utility (per i badge) */
+      .hexagon {
+        clip-path: polygon(
+          50% 0%,
+          100% 25%,
+          100% 75%,
+          50% 100%,
+          0% 75%,
+          0% 25%
+        );
+      }
+    </style>
+
+    <!-- Import map React / Recharts - REMOVED to use local node_modules -->
+    <!-- <script type="importmap"> ... </script> -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
