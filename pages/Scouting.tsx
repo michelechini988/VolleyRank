@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Match, Player, Fundamental, OutcomeCode, GameEvent, User, MatchLineup, CourtPosition, PlayerPosition, RotationImpact, PlayerMatchStats } from '../types';
-import { generateId, updateMatch, getMatches, getTeamPlayers, savePlayerMatchStats, getInitialLineupForMatch } from '../services/dbService';
+import { generateId } from '../services/dbService';
+import { matchRepository, playerRepository, statsRepository, lineupRepository } from '../lib/repositories';
 import { reduceMatchState } from '../lib/engine/matchEngine';
 import { computeVolleyRating } from '../lib/ratingSystem';
 import { eventStore } from '../lib/storage/eventStore';
@@ -121,13 +122,19 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
     const init = async () => {
        try {
            if (!user.clubId) return;
-           const [matches, teamPlayers, initLineup] = await Promise.all([
-               getMatches('t1', user.clubId),
-               getTeamPlayers('t1', user.clubId),
-               getInitialLineupForMatch(matchId)
+           
+           const m = await matchRepository.getMatchById(matchId);
+           if (!m) {
+               showToast('error', 'Errore', 'Match non trovato.');
+               setLoading(false);
+               return;
+           }
+           setMatch(m);
+
+           const [teamPlayers, initLineup] = await Promise.all([
+               playerRepository.getTeamPlayers(m.teamId, user.clubId),
+               lineupRepository.getInitialLineupForMatch(matchId)
            ]);
-           const m = matches.find(x => x.id === matchId);
-           setMatch(m || null);
            setPlayers(teamPlayers);
            
            let finalLineup = initLineup;
@@ -231,7 +238,7 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
 
   // --- HANDLERS ---
 
-  const handleRecordEvent = () => {
+  const handleRecordEvent = async () => {
     if (!selectedFundamental || !selectedOutcome || !match || !matchState) return;
     
     // Allow recording without player ONLY for 'other' fundamental (generic points)
@@ -254,15 +261,19 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
     };
 
     // Persistence & State Update
-    const newLog = eventStore.appendEvent(matchId, newEvent);
-    setEventLog(newLog);
+    try {
+        const newLog = await eventStore.appendEvent(matchId, newEvent);
+        setEventLog([...newLog]);
 
-    // UI Feedback
-    if (selectedOutcome.includes('ace')) showToast('success', 'ACE!');
-    if (selectedOutcome.includes('block_point')) showToast('success', 'MONSTER BLOCK!');
-    if (selectedOutcome.includes('attack_point')) showToast('success', 'KILL!');
-    if (selectedOutcome === 'opponent_error') showToast('success', 'PUNTO (Errore Avv.)');
-    if (selectedOutcome === 'opponent_point') showToast('info', 'Punto Avversario');
+        // UI Feedback
+        if (selectedOutcome.includes('ace')) showToast('success', 'ACE!');
+        if (selectedOutcome.includes('block_point')) showToast('success', 'MONSTER BLOCK!');
+        if (selectedOutcome.includes('attack_point')) showToast('success', 'KILL!');
+        if (selectedOutcome === 'opponent_error') showToast('success', 'PUNTO (Errore Avv.)');
+        if (selectedOutcome === 'opponent_point') showToast('info', 'Punto Avversario');
+    } catch (e) {
+        showToast('error', 'Errore', 'Impossibile salvare l\'evento.');
+    }
 
     // Reset UI
     setSelectedFundamental(null);
@@ -270,7 +281,7 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
     setSelectedPlayerId(null);
   };
 
-  const handleSubExecute = (courtPlayerId: string) => {
+  const handleSubExecute = async (courtPlayerId: string) => {
       if (!isSubMode || !selectedBenchPlayerId || !matchState || !match) return;
       
       const subEvent: GameEvent = {
@@ -283,21 +294,28 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
         subOutPlayerId: courtPlayerId
       };
 
-      const newLog = eventStore.appendEvent(matchId, subEvent);
-      setEventLog(newLog);
-
-      setIsSubMode(false);
-      setSelectedBenchPlayerId(null);
-      showToast('success', 'Cambio Effettuato');
+      try {
+          const newLog = await eventStore.appendEvent(matchId, subEvent);
+          setEventLog([...newLog]);
+          setIsSubMode(false);
+          setSelectedBenchPlayerId(null);
+          showToast('success', 'Cambio Effettuato');
+      } catch (e) {
+          showToast('error', 'Errore', 'Impossibile salvare la sostituzione.');
+      }
   };
 
-  const handleUndo = () => {
-      const newLog = eventStore.undoLastEvent(matchId);
-      setEventLog([...newLog]); // Force new array ref
-      showToast('info', 'Annullato', 'Stato ricalcolato.');
+  const handleUndo = async () => {
+      try {
+          const newLog = await eventStore.undoLastEvent(matchId);
+          setEventLog([...newLog]); // Force new array ref
+          showToast('info', 'Annullato', 'Stato ricalcolato.');
+      } catch (e) {
+          showToast('error', 'Errore', 'Impossibile annullare l\'evento.');
+      }
   };
 
-  const handleTimeout = () => {
+  const handleTimeout = async () => {
       if (!match || !matchState) return;
       
       const timeoutEvent: GameEvent = {
@@ -308,12 +326,16 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
           timestamp: Date.now()
       };
       
-      const newLog = eventStore.appendEvent(matchId, timeoutEvent);
-      setEventLog(newLog);
-      showToast('info', 'Timeout', 'Timeout registrato.');
+      try {
+          const newLog = await eventStore.appendEvent(matchId, timeoutEvent);
+          setEventLog([...newLog]);
+          showToast('info', 'Timeout', 'Timeout registrato.');
+      } catch (e) {
+          showToast('error', 'Errore', 'Impossibile salvare il timeout.');
+      }
   };
 
-  const handleNextSet = () => {
+  const handleNextSet = async () => {
       if (!match || !matchState) return;
       
       const newEvent: GameEvent = {
@@ -324,9 +346,13 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
           timestamp: Date.now()
       };
       
-      const newLog = eventStore.appendEvent(matchId, newEvent);
-      setEventLog(newLog);
-      showToast('success', `Inizio Set ${matchState.currentSet + 1}`);
+      try {
+          const newLog = await eventStore.appendEvent(matchId, newEvent);
+          setEventLog([...newLog]);
+          showToast('success', `Inizio Set ${matchState.currentSet + 1}`);
+      } catch (e) {
+          showToast('error', 'Errore', 'Impossibile iniziare il nuovo set.');
+      }
   };
 
   const handleFinishMatch = async () => {
@@ -338,7 +364,7 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
           try {
               // 1. Update Match Status
               const finalScore = `${matchState.setsWonUs}-${matchState.setsWonThem}`;
-              await updateMatch({
+              await matchRepository.updateMatch({
                   ...match,
                   status: 'completed',
                   result: finalScore
@@ -415,7 +441,7 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
               }
               
               if (statsToSave.length > 0) {
-                  await savePlayerMatchStats(statsToSave);
+                  await statsRepository.savePlayerMatchStats(statsToSave);
               }
 
               showToast('success', 'Partita Terminata', `Risultato finale: ${finalScore}`);
@@ -430,7 +456,7 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
       // }
   };
 
-  const handleManualScoreSubmit = () => {
+  const handleManualScoreSubmit = async () => {
       if (!match || !matchState) return;
       
       const adjustmentEvent: GameEvent = {
@@ -445,13 +471,17 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
           }
       };
       
-      const newLog = eventStore.appendEvent(matchId, adjustmentEvent);
-      setEventLog(newLog);
-      setShowScoreModal(false);
-      showToast('info', 'Punteggio Aggiornato', `Nuovo punteggio: ${manualScoreUs}-${manualScoreThem}`);
+      try {
+          const newLog = await eventStore.appendEvent(matchId, adjustmentEvent);
+          setEventLog([...newLog]);
+          setShowScoreModal(false);
+          showToast('info', 'Punteggio Aggiornato', `Nuovo punteggio: ${manualScoreUs}-${manualScoreThem}`);
+      } catch (e) {
+          showToast('error', 'Errore', 'Impossibile aggiornare il punteggio.');
+      }
   };
 
-  const handleManualRotation = (steps: number) => {
+  const handleManualRotation = async (steps: number) => {
       if (!match || !matchState) return;
       
       const rotationEvent: GameEvent = {
@@ -465,12 +495,16 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
           }
       };
       
-      const newLog = eventStore.appendEvent(matchId, rotationEvent);
-      setEventLog(newLog);
-      showToast('info', 'Rotazione Aggiornata', steps > 0 ? 'Avanti (+1)' : 'Indietro (-1)');
+      try {
+          const newLog = await eventStore.appendEvent(matchId, rotationEvent);
+          setEventLog([...newLog]);
+          showToast('info', 'Rotazione Aggiornata', steps > 0 ? 'Avanti (+1)' : 'Indietro (-1)');
+      } catch (e) {
+          showToast('error', 'Errore', 'Impossibile aggiornare la rotazione.');
+      }
   };
 
-  const handleRestartSet = () => {
+  const handleRestartSet = async () => {
       if (!match || !matchState) return;
       if (!confirm('Sei sicuro di voler riavviare il set corrente? Tutti i punti di questo set verranno azzerati.')) return;
 
@@ -482,10 +516,14 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
           timestamp: Date.now()
       };
 
-      const newLog = eventStore.appendEvent(matchId, restartEvent);
-      setEventLog(newLog);
-      setShowTools(false);
-      showToast('info', 'Set Riavviato', `Set ${matchState.currentSet} ricominciato.`);
+      try {
+          const newLog = await eventStore.appendEvent(matchId, restartEvent);
+          setEventLog([...newLog]);
+          setShowTools(false);
+          showToast('info', 'Set Riavviato', `Set ${matchState.currentSet} ricominciato.`);
+      } catch (e) {
+          showToast('error', 'Errore', 'Impossibile riavviare il set.');
+      }
   };
 
   // --- RENDER HELPERS ---

@@ -4,11 +4,11 @@ import path from "path";
 import cors from "cors";
 
 // Services
-import { fetchSeasons, fetchCompetitionsBySeason, fetchTeamsByCompetition, fetchMatchesByCompetition, fetchStandingsByCompetition } from "./src/services/official_competition_sync/provider_fipav_trentino.js";
-import { suggestTeamLinks, confirmTeamLink } from "./src/services/official_competition_sync/team_linking_service.js";
-import { addCompetitionLink, removeCompetitionLink, getCompetitionLinks } from "./src/services/official_competition_sync/competition_membership_service.js";
-import { runFullSync, runIncrementalSync } from "./src/services/official_competition_sync/sync_scheduler.js";
-import { supabaseAdmin } from "./src/services/official_competition_sync/official_catalog_service.js";
+import { fetchSeasons, fetchCompetitionsBySeason, fetchTeamsByCompetition, fetchMatchesByCompetition, fetchStandingsByCompetition } from "./services/official_competition_sync/provider_fipav_trentino.js";
+import { suggestTeamLinks, confirmTeamLink } from "./services/official_competition_sync/team_linking_service.js";
+import { addCompetitionLink, removeCompetitionLink, getCompetitionLinks } from "./services/official_competition_sync/competition_membership_service.js";
+import { runFullSync, runIncrementalSync } from "./services/official_competition_sync/sync_scheduler.js";
+import { supabaseAdmin } from "./services/official_competition_sync/official_catalog_service.js";
 
 async function startServer() {
   const app = express();

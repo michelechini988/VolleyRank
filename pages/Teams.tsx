@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Player, PlayerPosition, User } from '../types';
-import { getTeamPlayers, updatePlayer, createPlayer, generateId } from '../services/dbService';
+import { Player, PlayerPosition, User, Team } from '../types';
+import { generateId } from '../services/dbService';
+import { playerRepository, teamRepository } from '../lib/repositories';
 import { Button } from '../components/ui/Buttons';
 
 interface TeamsProps {
@@ -12,14 +13,27 @@ interface TeamsProps {
 
 export const Teams: React.FC<TeamsProps> = ({ user, showToast, onNavigate }) => {
     const [teamPlayers, setTeamPlayers] = useState<Player[]>([]);
+    const [teams, setTeams] = useState<Team[]>([]);
+    const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
     const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isAddingNew, setIsAddingNew] = useState(false);
   
     useEffect(() => {
-      if (user.clubId) {
-          getTeamPlayers('t1', user.clubId).then(setTeamPlayers);
-      }
+      const loadData = async () => {
+          if (user.clubId) {
+              const clubTeams = await teamRepository.getTeams(user.clubId);
+              setTeams(clubTeams);
+              const teamId = clubTeams.length > 0 ? clubTeams[0].id : null;
+              setSelectedTeamId(teamId);
+              
+              if (teamId) {
+                  const players = await playerRepository.getTeamPlayers(teamId, user.clubId);
+                  setTeamPlayers(players);
+              }
+          }
+      };
+      loadData();
     }, [user.clubId]);
   
     const handleEditChange = (field: keyof Player, value: string) => {
@@ -38,10 +52,10 @@ export const Teams: React.FC<TeamsProps> = ({ user, showToast, onNavigate }) => 
     };
 
     const handleCreateNewClick = () => {
-        if (!user.clubId) return;
+        if (!user.clubId || !selectedTeamId) return;
         const newP: Player = {
             id: generateId(), // temp
-            teamId: 't1',
+            teamId: selectedTeamId,
             clubId: user.clubId,
             firstName: '',
             lastName: '',
@@ -61,11 +75,11 @@ export const Teams: React.FC<TeamsProps> = ({ user, showToast, onNavigate }) => 
       setIsSaving(true);
       try {
         if (isAddingNew) {
-            const created = await createPlayer(editingPlayer);
+            const created = await playerRepository.createPlayer(editingPlayer);
             setTeamPlayers(prev => [...prev, created]);
             showToast('success', 'Player Added', `${created.firstName} joined the team.`);
         } else {
-            const saved = await updatePlayer(editingPlayer);
+            const saved = await playerRepository.updatePlayer(editingPlayer);
             setTeamPlayers((prev) =>
             prev.map((p) => (p.id === saved.id ? saved : p))
             );

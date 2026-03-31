@@ -1,8 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
-import { User, UserRole, Match } from '../types';
+import { User, UserRole, Match, Team } from '../types';
 import { Button } from '../components/ui/Buttons';
-import { getMatches, createMatch, generateId } from '../services/dbService';
+import { generateId } from '../services/dbService';
+import { matchRepository, teamRepository } from '../lib/repositories';
 
 interface DashboardProps {
   user: User;
@@ -11,6 +12,8 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // New Match Modal State
@@ -24,22 +27,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
   });
 
   useEffect(() => {
-    if (user.clubId) {
-        getMatches('t1', user.clubId).then(data => {
-            setMatches(data);
-            setLoading(false);
-        });
-    } else {
+    const loadData = async () => {
+        if (user.clubId) {
+            const clubTeams = await teamRepository.getTeams(user.clubId);
+            setTeams(clubTeams);
+            const teamId = clubTeams.length > 0 ? clubTeams[0].id : null;
+            setSelectedTeamId(teamId);
+            
+            if (teamId) {
+                const teamMatches = await matchRepository.getMatches(teamId, user.clubId);
+                setMatches(teamMatches);
+            }
+        }
         setLoading(false);
-    }
+    };
+    loadData();
   }, [user.clubId]);
 
   const handleCreateMatch = async () => {
-      if (!newMatchData.opponentName || !user.clubId) return;
+      if (!newMatchData.opponentName || !user.clubId || !selectedTeamId) return;
       try {
-          const match = await createMatch({
+          const match = await matchRepository.createMatch({
               id: generateId(),
-              teamId: 't1',
+              teamId: selectedTeamId,
               clubId: user.clubId,
               opponentName: newMatchData.opponentName,
               date: newMatchData.date,

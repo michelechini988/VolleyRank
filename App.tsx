@@ -9,32 +9,15 @@ import { Teams } from './pages/Teams';
 import { Button } from './components/ui/Buttons';
 import { ToastContainer, ToastMessage, ToastType } from './components/ui/Toast';
 import { User, UserRole, Player } from './types';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Simple Hash Router Implementation
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [route, setRoute] = useState<string>(window.location.hash.slice(1) || '/');
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
+  const { user, loading, login, logout } = useAuth();
   
   // Toast State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const storedUser = localStorage.getItem('volleyrank_user');
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch (e) {
-          console.error("Invalid user data in localStorage", e);
-          localStorage.removeItem('volleyrank_user');
-        }
-      }
-      setIsAuthReady(true);
-    };
-
-    checkAuth();
-  }, []);
 
   useEffect(() => {
     const handleHashChange = () => setRoute(window.location.hash.slice(1) || '/');
@@ -57,17 +40,8 @@ const App: React.FC = () => {
 
   const handleLogin = async () => {
     try {
-        // Mock login for prototype
-        const mockUser: User = {
-          id: 'mock-user-1',
-          name: 'Demo Coach',
-          email: 'coach@volleyrank.com',
-          role: UserRole.STAFF,
-          clubId: 'c1',
-        };
-        localStorage.setItem('volleyrank_user', JSON.stringify(mockUser));
-        setUser(mockUser);
-        addToast('success', 'Logged In', 'Welcome to VolleyRank (Demo Mode)!');
+        await login();
+        addToast('success', 'Logged In', 'Welcome to VolleyRank!');
         navigate('/dashboard');
     } catch (error) {
         console.error("Login failed", error);
@@ -77,8 +51,7 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-        localStorage.removeItem('volleyrank_user');
-        setUser(null);
+        await logout();
         navigate('/');
         addToast('info', 'Logged Out', 'See you next time!');
     } catch (error) {
@@ -239,6 +212,14 @@ const App: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Layout 
@@ -259,6 +240,14 @@ const App: React.FC = () => {
           </button>
       </div>
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 

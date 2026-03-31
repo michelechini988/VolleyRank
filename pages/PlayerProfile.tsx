@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Player, PlayerMatchStats, Match, User } from '../types';
-import { getPlayerMatchStats, getMatches, getTeamPlayers } from '../services/dbService';
+import { playerRepository, matchRepository, statsRepository } from '../lib/repositories';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
 interface PlayerProfileProps {
@@ -23,14 +23,13 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ user, playerId, on
       try {
         if (!user.clubId) return;
         // Fetch player details first
-        const allPlayers = await getTeamPlayers('t1', user.clubId);
-        const foundPlayer = allPlayers.find(p => p.id === playerId);
+        const foundPlayer = await playerRepository.getPlayerById(playerId);
         
         if (foundPlayer && isMounted) {
             setPlayer(foundPlayer);
             const [m, s] = await Promise.all([
-                getMatches('t1', user.clubId),
-                getPlayerMatchStats(playerId),
+                matchRepository.getMatches(foundPlayer.teamId, user.clubId),
+                statsRepository.getPlayerMatchStats(playerId),
             ]);
             if (isMounted) {
                 // Filter matches to only those the player participated in based on stats

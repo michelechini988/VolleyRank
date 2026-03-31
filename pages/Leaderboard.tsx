@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Player, PlayerPosition, User } from '../types';
-import { getLeaderboard } from '../services/dbService';
+import { playerRepository } from '../lib/repositories';
 
 interface LeaderboardProps {
   user: User;
@@ -17,7 +17,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ user }) => {
   useEffect(() => {
     setLoading(true);
     if (user.clubId) {
-        getLeaderboard({ role: roleFilter, region: regionFilter, clubId: user.clubId }).then(data => {
+        playerRepository.getLeaderboard({ role: roleFilter, region: regionFilter, clubId: user.clubId }).then(data => {
             setPlayers(data);
             setLoading(false);
         });
