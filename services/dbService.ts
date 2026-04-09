@@ -114,6 +114,11 @@ export const getMatches = async (teamId: string, clubId: string): Promise<Match[
     return matches.filter(m => m.teamId === teamId && m.clubId === clubId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
 
+export const getMatchById = async (matchId: string): Promise<Match | null> => {
+    const matches = getStorage('matches', mockMatches);
+    return matches.find(m => m.id === matchId) || null;
+};
+
 export const createMatch = async (match: Match): Promise<Match> => {
     const matches = getStorage('matches', mockMatches);
     matches.push(match);

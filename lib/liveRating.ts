@@ -18,6 +18,8 @@ export function computeLiveRatingsForMatch(
   const eventsByPlayer: Record<string, GameEvent[]> = {};
   
   events.forEach(event => {
+    if (!event.playerId) return;
+
     if (!eventsByPlayer[event.playerId]) {
       eventsByPlayer[event.playerId] = [];
     }
