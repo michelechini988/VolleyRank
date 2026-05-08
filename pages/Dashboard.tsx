@@ -31,18 +31,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
         if (user.clubId) {
             const clubTeams = await teamRepository.getTeams(user.clubId);
             setTeams(clubTeams);
-            const teamId = clubTeams.length > 0 ? clubTeams[0].id : null;
-            setSelectedTeamId(teamId);
-            
-            if (teamId) {
-                const teamMatches = await matchRepository.getMatches(teamId, user.clubId);
-                setMatches(teamMatches);
+            if (!selectedTeamId && clubTeams.length > 0) {
+                setSelectedTeamId(clubTeams[0].id);
             }
         }
-        setLoading(false);
     };
     loadData();
   }, [user.clubId]);
+
+  useEffect(() => {
+      const loadMatches = async () => {
+          if (selectedTeamId && user.clubId) {
+              setLoading(true);
+              const teamMatches = await matchRepository.getMatches(selectedTeamId, user.clubId);
+              setMatches(teamMatches);
+              setLoading(false);
+          }
+      };
+      loadMatches();
+  }, [selectedTeamId, user.clubId]);
 
   const handleCreateMatch = async () => {
       if (!newMatchData.opponentName || !user.clubId || !selectedTeamId) return;
@@ -128,9 +135,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
           <p className="text-lg text-terracotta font-medium">Welcome back, {user.name}</p>
         </div>
         
-        <div className="mt-4 md:mt-0 flex gap-4">
-            <Button variant="primary" onClick={() => setShowCreateMatch(true)}>+ New Match</Button>
-            <Button variant="secondary" onClick={() => onNavigate('/teams')}>Manage Teams</Button>
+        <div className="mt-4 md:mt-0 flex items-center gap-4">
+            <select
+                className="border-2 border-black rounded-lg px-3 py-1 bg-white font-bold"
+                value={selectedTeamId || ''}
+                onChange={(e) => setSelectedTeamId(e.target.value)}
+            >
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <div className="flex gap-2">
+                <Button variant="primary" onClick={() => setShowCreateMatch(true)}>+ New Match</Button>
+                <Button variant="secondary" onClick={() => onNavigate('/teams')}>Manage Teams</Button>
+            </div>
         </div>
       </header>
 

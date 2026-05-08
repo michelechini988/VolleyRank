@@ -78,6 +78,23 @@ export const getTeams = async (clubId: string): Promise<Team[]> => {
   return teams.filter(t => t.clubId === clubId);
 };
 
+export const createTeam = async (team: Team): Promise<Team> => {
+  if (hasSupabaseConfig) {
+    await supabase.from('teams').insert({
+      id: team.id,
+      club_id: team.clubId,
+      name: team.name,
+      category: team.category,
+      gender: team.gender
+    });
+    return team;
+  }
+  const teams = getStorage('teams', mockTeams);
+  teams.push(team);
+  setStorage('teams', teams);
+  return team;
+};
+
 // --- PLAYERS ---
 export const getTeamPlayers = async (teamId: string, clubId: string): Promise<Player[]> => {
   if (hasSupabaseConfig) {
