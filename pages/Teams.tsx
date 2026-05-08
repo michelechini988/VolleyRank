@@ -18,23 +18,83 @@ export const Teams: React.FC<TeamsProps> = ({ user, showToast, onNavigate }) => 
     const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isAddingNew, setIsAddingNew] = useState(false);
+
+    // Sync State
+    const [showSyncModal, setShowSyncModal] = useState(false);
+    const [officialSeasons, setOfficialSeasons] = useState<any[]>([]);
+    const [officialCompetitions, setOfficialCompetitions] = useState<any[]>([]);
+    const [officialTeams, setOfficialTeams] = useState<any[]>([]);
+    const [selectedSyncSeason, setSelectedSyncSeason] = useState('');
+    const [selectedSyncComp, setSelectedSyncComp] = useState('');
+
+    useEffect(() => {
+        if (showSyncModal && officialSeasons.length === 0) {
+            fetch('/api/official/seasons')
+                .then(res => res.json())
+                .then(data => {
+                    setOfficialSeasons(data);
+                    if (data.length > 0) setSelectedSyncSeason(data[0].id);
+                });
+        }
+    }, [showSyncModal]);
+
+    useEffect(() => {
+        if (selectedSyncSeason) {
+            fetch(`/api/official/competitions?season_id=${selectedSyncSeason}`)
+                .then(res => res.json())
+                .then(data => setOfficialCompetitions(data));
+        }
+    }, [selectedSyncSeason]);
+
+    useEffect(() => {
+        if (selectedSyncComp) {
+            fetch(`/api/official/competitions/${selectedSyncComp}/teams`)
+                .then(res => res.json())
+                .then(data => setOfficialTeams(data));
+        }
+    }, [selectedSyncComp]);
+
+    const handleImportTeam = async (offTeam: any) => {
+        if (!user.clubId) return;
+        try {
+            const newTeam = await teamRepository.createTeam({
+                id: generateId(),
+                clubId: user.clubId,
+                name: offTeam.name,
+                category: officialCompetitions.find(c => c.id === selectedSyncComp)?.category || 'General',
+                gender: 'M' // Default
+            });
+            setTeams(prev => [...prev, newTeam]);
+            setSelectedTeamId(newTeam.id);
+            setShowSyncModal(false);
+            showToast('success', 'Team Imported', `Added ${offTeam.name} to your club.`);
+        } catch (e) {
+            showToast('error', 'Sync Failed', 'Could not import team.');
+        }
+    };
   
     useEffect(() => {
       const loadData = async () => {
           if (user.clubId) {
               const clubTeams = await teamRepository.getTeams(user.clubId);
               setTeams(clubTeams);
-              const teamId = clubTeams.length > 0 ? clubTeams[0].id : null;
-              setSelectedTeamId(teamId);
-              
-              if (teamId) {
-                  const players = await playerRepository.getTeamPlayers(teamId, user.clubId);
-                  setTeamPlayers(players);
+              if (!selectedTeamId && clubTeams.length > 0) {
+                  setSelectedTeamId(clubTeams[0].id);
               }
           }
       };
       loadData();
     }, [user.clubId]);
+
+    useEffect(() => {
+        const loadPlayers = async () => {
+            if (selectedTeamId && user.clubId) {
+                const players = await playerRepository.getTeamPlayers(selectedTeamId, user.clubId);
+                setTeamPlayers(players);
+            }
+        };
+        loadPlayers();
+    }, [selectedTeamId, user.clubId]);
   
     const handleEditChange = (field: keyof Player, value: string) => {
       if (!editingPlayer) return;
@@ -120,7 +180,19 @@ export const Teams: React.FC<TeamsProps> = ({ user, showToast, onNavigate }) => 
                  </h1>
                  <p className="text-terracotta font-bold mt-1">{teamPlayers.length} Players Active</p>
              </div>
-             <Button onClick={handleCreateNewClick}>+ Add Player</Button>
+             <div className="flex gap-4 items-center">
+                <select
+                    className="border-2 border-black rounded-lg px-3 py-1 bg-white font-bold"
+                    value={selectedTeamId || ''}
+                    onChange={(e) => setSelectedTeamId(e.target.value)}
+                >
+                    {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                <div className="flex gap-2">
+                    <Button variant="secondary" onClick={() => setShowSyncModal(true)}>🌐 Sync FIPAV</Button>
+                    <Button onClick={handleCreateNewClick}>+ Add Player</Button>
+                </div>
+             </div>
           </div>
           
           <div className="space-y-10">
@@ -247,6 +319,55 @@ export const Teams: React.FC<TeamsProps> = ({ user, showToast, onNavigate }) => 
                         <Button variant="secondary" size="lg" onClick={() => setEditingPlayer(null)}>
                             CANCEL
                         </Button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* SYNC MODAL */}
+        {showSyncModal && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="bg-cream border-4 border-black rounded-card shadow-cartoon p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="font-title text-4xl text-teal">SYNC FIPAV TRENTINO</h2>
+                        <button onClick={() => setShowSyncModal(false)} className="text-4xl hover:text-terracotta leading-none">&times;</button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider mb-1">Season</label>
+                            <select
+                                className="w-full border-2 border-black rounded-lg p-3 bg-white"
+                                value={selectedSyncSeason}
+                                onChange={(e) => setSelectedSyncSeason(e.target.value)}
+                            >
+                                {officialSeasons.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider mb-1">Competition</label>
+                            <select
+                                className="w-full border-2 border-black rounded-lg p-3 bg-white"
+                                value={selectedSyncComp}
+                                onChange={(e) => setSelectedSyncComp(e.target.value)}
+                            >
+                                <option value="">Select Competition...</option>
+                                {officialCompetitions.map(c => <option key={c.id} value={c.id}>[{c.category}] {c.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <h3 className="font-bold uppercase text-sm border-b-2 border-black/10 pb-2">Teams in Competition</h3>
+                        {officialTeams.length === 0 && <div className="text-gray-400 italic">Select a competition to see teams.</div>}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {officialTeams.map(offTeam => (
+                                <div key={offTeam.id} className="flex justify-between items-center p-3 bg-white border-2 border-black rounded-lg">
+                                    <span className="font-bold">{offTeam.name}</span>
+                                    <Button size="sm" onClick={() => handleImportTeam(offTeam)}>Import</Button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

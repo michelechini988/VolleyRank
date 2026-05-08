@@ -15,7 +15,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 const AppContent: React.FC = () => {
   const [route, setRoute] = useState<string>(window.location.hash.slice(1) || '/');
   const { user, loading, login, logout } = useAuth();
-  
+  const [showRegister, setShowRegister] = useState(false);
+  const [regData, setRegData] = useState({ clubName: '', city: '', adminName: '' });
+
   // Toast State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -47,6 +49,22 @@ const AppContent: React.FC = () => {
         console.error("Login failed", error);
         addToast('error', 'Login Failed', 'Could not sign in.');
     }
+  };
+
+  const handleRegister = async () => {
+      if (!regData.clubName || !regData.adminName) return;
+      try {
+          // 1. Create Club
+          const clubId = Math.random().toString(36).substr(2, 9);
+          // In a real app we would call a repository here.
+          // For beta, we just update the mock user in login.
+          await login(UserRole.CLUB_ADMIN);
+          addToast('success', 'Club Registered', `Welcome ${regData.adminName}! Your club ${regData.clubName} is ready.`);
+          setShowRegister(false);
+          navigate('/dashboard');
+      } catch (e) {
+          addToast('error', 'Registration Failed');
+      }
   };
 
   const handleLogout = async () => {
@@ -87,12 +105,20 @@ const AppContent: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button size="xl" onClick={() => handleLogin(UserRole.CLUB_ADMIN)}>
-              Login as Admin
-            </Button>
-            <Button size="xl" variant="secondary" onClick={() => handleLogin(UserRole.PLAYER)}>
-              Login as Player
-            </Button>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <Button size="xl" onClick={() => handleLogin(UserRole.CLUB_ADMIN)}>
+                  Login as Admin
+                </Button>
+                <Button size="xl" variant="secondary" onClick={() => handleLogin(UserRole.PLAYER)}>
+                  Login as Player
+                </Button>
+              </div>
+              <div className="text-sm font-bold uppercase text-black/40">New here?</div>
+              <Button variant="secondary" onClick={() => setShowRegister(true)}>
+                Register your Club
+              </Button>
+            </div>
           </div>
         </section>
 
@@ -235,6 +261,48 @@ const AppContent: React.FC = () => {
       </Layout>
       
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+
+      {/* Register Modal */}
+      {showRegister && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+              <div className="bg-cream border-4 border-black rounded-card shadow-cartoon p-8 max-w-md w-full">
+                  <h2 className="font-title text-5xl mb-6 text-teal">Join VolleyRank</h2>
+                  <div className="space-y-4">
+                      <div>
+                          <label className="block text-xs font-bold uppercase mb-1">Club Name</label>
+                          <input
+                            className="w-full border-2 border-black rounded-lg p-3"
+                            placeholder="e.g. Trentino Volley"
+                            value={regData.clubName}
+                            onChange={(e) => setRegData({...regData, clubName: e.target.value})}
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold uppercase mb-1">City</label>
+                          <input
+                            className="w-full border-2 border-black rounded-lg p-3"
+                            placeholder="e.g. Trento"
+                            value={regData.city}
+                            onChange={(e) => setRegData({...regData, city: e.target.value})}
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold uppercase mb-1">Your Name</label>
+                          <input
+                            className="w-full border-2 border-black rounded-lg p-3"
+                            placeholder="Admin Name"
+                            value={regData.adminName}
+                            onChange={(e) => setRegData({...regData, adminName: e.target.value})}
+                          />
+                      </div>
+                  </div>
+                  <div className="flex gap-4 mt-8">
+                      <Button variant="secondary" className="flex-1" onClick={() => setShowRegister(false)}>Cancel</Button>
+                      <Button className="flex-1" onClick={handleRegister}>Register</Button>
+                  </div>
+              </div>
+          </div>
+      )}
       
       {/* Dev Tool: Reset Data */}
       <div className="fixed bottom-2 right-2 opacity-20 hover:opacity-100 transition-opacity">

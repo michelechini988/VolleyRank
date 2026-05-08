@@ -15,6 +15,7 @@ export const clubRepository = {
 
 export const teamRepository = {
   getTeams: async (clubId: string): Promise<Team[]> => db.getTeams(clubId),
+  createTeam: async (team: Team): Promise<Team> => db.createTeam(team),
 };
 
 export const playerRepository = {
