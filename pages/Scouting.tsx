@@ -420,7 +420,7 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
                       }
 
                       statsToSave.push({
-                          id: `s_${match.id}_${pid}`,
+                          id: generateId(), // Use generateId instead of fixed string to avoid potential conflicts if re-saving
                           matchId: match.id,
                           playerId: pid,
                           teamId: match.teamId,
@@ -442,6 +442,24 @@ export const Scouting: React.FC<ScoutingProps> = ({ matchId, user, onFinished, s
               
               if (statsToSave.length > 0) {
                   await statsRepository.savePlayerMatchStats(statsToSave);
+              }
+
+              // 3. Update Player Averages and Match Counts (Simplified)
+              for (const pid of playerStats.keys()) {
+                  const p = await playerRepository.getPlayerById(pid);
+                  if (p) {
+                      const matchStats = statsToSave.find(s => s.playerId === pid);
+                      if (matchStats) {
+                          const newMatchesPlayed = (p.matchesPlayed || 0) + 1;
+                          const newAverageRating = ((p.averageRating * (p.matchesPlayed || 0)) + matchStats.rating) / newMatchesPlayed;
+
+                          await playerRepository.updatePlayer({
+                              ...p,
+                              matchesPlayed: newMatchesPlayed,
+                              averageRating: Number(newAverageRating.toFixed(2))
+                          });
+                      }
+                  }
               }
 
               showToast('success', 'Partita Terminata', `Risultato finale: ${finalScore}`);

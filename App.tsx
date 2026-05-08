@@ -38,10 +38,10 @@ const AppContent: React.FC = () => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const handleLogin = async () => {
+  const handleLogin = async (role: UserRole) => {
     try {
-        await login();
-        addToast('success', 'Logged In', 'Welcome to VolleyRank!');
+        await login(role);
+        addToast('success', 'Logged In', `Welcome to VolleyRank as ${role}!`);
         navigate('/dashboard');
     } catch (error) {
         console.error("Login failed", error);
@@ -87,8 +87,11 @@ const AppContent: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button size="xl" onClick={handleLogin}>
-              Login with Google
+            <Button size="xl" onClick={() => handleLogin(UserRole.CLUB_ADMIN)}>
+              Login as Admin
+            </Button>
+            <Button size="xl" variant="secondary" onClick={() => handleLogin(UserRole.PLAYER)}>
+              Login as Player
             </Button>
           </div>
         </section>
